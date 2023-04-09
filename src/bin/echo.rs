@@ -1,39 +1,7 @@
 use std::io::{StdoutLock, Write};
 
 use anyhow::Context;
-use serde::{Deserialize, Serialize};
-
-#[derive(Debug, Serialize, Deserialize)]
-struct Message {
-    src: String,
-    dest: String,
-    body: Body,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct Body {
-    #[serde(flatten)]
-    type_: MessageType,
-    msg_id: Option<usize>,
-    in_reply_to: Option<usize>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(tag = "type")]
-#[serde(rename_all = "snake_case")]
-enum MessageType {
-    Init {
-        node_id: String,
-        node_ids: Vec<String>,
-    },
-    InitOk,
-    Echo {
-        echo: String,
-    },
-    EchoOk {
-        echo: String,
-    },
-}
+use fly_dist::{Body, Message, MessageType};
 
 struct EchoState {
     id: usize,
@@ -72,8 +40,7 @@ impl EchoState {
                     .context("serializing into io stream")?;
                 output.write_all(b"\n").context("writing new line")?;
             }
-            MessageType::InitOk => {}
-            MessageType::EchoOk { .. } => {}
+            _ => {}
         }
 
         self.id += 1;
