@@ -10,6 +10,20 @@ pub struct Message<Payload> {
     pub body: Body<Payload>,
 }
 
+impl<Payload> Message<Payload> {
+    pub fn into_response(self, id: usize) -> Message<Payload> {
+        Message {
+            src: self.dest,
+            dest: self.src,
+            body: Body {
+                type_: self.body.type_,
+                msg_id: Some(id),
+                in_reply_to: self.body.msg_id,
+            },
+        }
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Body<Payload> {
     #[serde(flatten)]

@@ -2,7 +2,7 @@ use std::io::{StdoutLock, Write};
 
 use ::serde::Serialize;
 use anyhow::Context;
-use fly_dist::{Body, Message, Node};
+use fly_dist::{Message, Node};
 use serde::Deserialize;
 use uuid::Uuid;
 
@@ -22,20 +22,14 @@ enum IdsPayload {
 
 impl Node<IdsPayload> for IdsState {
     fn handle(&mut self, msg: Message<IdsPayload>, output: &mut StdoutLock) -> anyhow::Result<()> {
-        match msg.body.type_ {
+        let mut response = msg.into_response(self.id);
+        match response.body.type_ {
             IdsPayload::Generate => {
                 let id = IdsState::get_next_id();
-                let msg = Message {
-                    body: Body {
-                        type_: IdsPayload::GenerateOk { id: id.to_string() },
-                        msg_id: Some(self.id),
-                        in_reply_to: msg.body.msg_id,
-                    },
-                    src: msg.dest,
-                    dest: msg.src,
-                };
+                response.body.type_ = IdsPayload::GenerateOk { id: id.to_string() };
 
-                serde_json::to_writer(&mut *output, &msg).context("serializing into io stream")?;
+                serde_json::to_writer(&mut *output, &response)
+                    .context("serializing into io stream")?;
                 output.write_all(b"\n").context("writing new line")?;
             }
             _ => {}

@@ -1,8 +1,10 @@
+pub mod broadcast;
+
 use std::io::{StdoutLock, Write};
 
 use ::serde::{Deserialize, Serialize};
 use anyhow::Context;
-use fly_dist::{Body, Message, Node, Payload};
+use fly_dist::{Message, Node};
 
 struct EchoState {
     id: usize,
@@ -20,19 +22,12 @@ impl fly_dist::Payload for EchoPayload {}
 
 impl Node<EchoPayload> for EchoState {
     fn handle(&mut self, msg: Message<EchoPayload>, output: &mut StdoutLock) -> anyhow::Result<()> {
-        match msg.body.type_ {
+        let mut response = msg.into_response(self.id);
+        match response.body.type_ {
             EchoPayload::Echo { echo } => {
-                let reply = Message {
-                    src: msg.dest,
-                    dest: msg.src,
-                    body: Body {
-                        type_: EchoPayload::EchoOk { echo },
-                        msg_id: Some(self.id),
-                        in_reply_to: msg.body.msg_id.into(),
-                    },
-                };
+                response.body.type_ = EchoPayload::EchoOk { echo };
 
-                serde_json::to_writer(&mut *output, &reply)
+                serde_json::to_writer(&mut *output, &response)
                     .context("serializing into io stream")?;
                 output.write_all(b"\n").context("writing new line")?;
             }
